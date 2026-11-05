@@ -1,0 +1,8 @@
+This project includes unmodified component models and component tests from
+Purdue SoCET's Atalla-Sim, supplied by the user as atalla_sim.zip.
+Upstream project: https://github.com/Purdue-SoCET/Atalla-Sim/
+The original LICENSE is included. See UPSTREAM_MANIFEST.json for file hashes.
+
+The mini_sim package, packaging, benchmark tests, and this documentation were
+added to isolate the dense compute baseline for structured sparsity research.
+

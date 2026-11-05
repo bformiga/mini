@@ -1,0 +1,26 @@
+{
+  "source": "User-supplied atalla_sim.zip",
+  "files_sha256": {
+    "src/base/testing.py": "d517bbd52e29216e5d8ee0f880a472f77fa9ad3d4ec76bf7699a13d0714edb3f",
+    "src/base/debug.py": "6904925c50188a496e7f88f77b21ec0fe83f9fa6732806f5384a70f3a1a12f5a",
+    "src/base/clocked_object.py": "ca6a68b042de7e5a9e865c752030e3b5c6b28139c1bbc079b2b081f942d201ec",
+    "src/base/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/base/sched.py": "bccc54b658e14a969cfb984b2c33606e8562f78d6a4b782a24a6e1de336d5c46",
+    "src/base/core.py": "9bffcff6dbfdb96ecd551ec9c1c3e47716447e728299ec206412778b00d9dca9",
+    "src/base/eventq.py": "81f6ea5dafa2e4ddb612b777fbca6069d287aa64eb5fd57e8d3222350054ee49",
+    "src/base/queue.py": "7509d8269305656d03878e91305e7ebec0f1da636b0b34521ddaa8e02ecd28df",
+    "src/base/sim.py": "e3dfc04a743ff9ae0aa1ce16f2fe73b68b1dbb5f7451c2c304249d8d22688540",
+    "src/base/clock_domain.py": "40b2707637861c6298578d620a92f84888258c27a0ad134a82d27b753f6aed54",
+    "src/base/dtype.py": "5a1390ac36a088ec528b00aeea49a43f803f2e42397699f137eee48c1b3faafa",
+    "src/base/rtl_module.py": "3a953d223c103d69787b93edc437d69297044d331dbf7e0e71a661be07f80105",
+    "src/native/__init__.py": "7a2b6bdb926dfaa050fcd83c2e4c6aaab23ca8983dcd64f834a52cecf53d9c94",
+    "src/native/kernels.py": "57720c494469e2fe90578c8ab9ab610232cbb774f5c5cd2865e9015b594750e9",
+    "src/systolic_array/systolic_array_tpu.py": "17de284cb9fbbea8c8fa39e2b6d3351b93b497d3606a34fe7ade66836dd7898c",
+    "src/systolic_array/systolic_array_meissa.py": "9c7dc64d183c317055d07669a465c440bc0086416606237569075826580b8577",
+    "src/native/atalla_kernels.cpp": "026db7c68d14198a77cf534ea8a561cb0cec33a3d227fd754882932ef37d4390",
+    "LICENSE": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+    "tests/systolic_array/test_systolic_array_meissa.py": "0070814774daabd7dc29cc73545dcd5aef2dc21b98e8b393a718d32029314b52",
+    "tests/systolic_array/test_systolic_array_tpu.py": "7b645fcbfbb1e5e2c61f49e252df00a9dc50fbef5f2fe765b5d774305f9e6b3f",
+    "tests/systolic_array/test_idle_fast_path.py": "4ee3ad0e0b69a0fe9e984a771e9623018e547120057f9a547e6c1614ef8db8b7"
+  }
+}
