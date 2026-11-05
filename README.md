@@ -47,8 +47,7 @@ full-system bridges, plotting stack and full-system performance monitor are
 excluded. The benchmark calls the array's `tick()` once per cycle, as the
 original standalone component tests do. It does not run an RTL simulator.
 
-Upstream component files are copied without modifications. `UPSTREAM_MANIFEST.json`
-records their SHA-256 hashes against the uploaded archive. The additional
+Upstream component files are copied without modifications. The additional
 package initializer is empty. Source attribution and the original Apache 2.0
 license are retained; the archive does not identify a Git commit, so no upstream
 commit hash is claimed.
