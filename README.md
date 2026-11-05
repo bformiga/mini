@@ -106,8 +106,11 @@ metadata, operand-selection logic, zero skipping, or sparse speedup is modeled.
 Dense and zero-patterned weights have the same timing for the same configuration.
 The new sparsity RTL has not yet been supplied.
 
-Use `--input workload.npz` to supply arrays named `A` and `W`; specify matching
-`--size` and `--rows`. External inputs replace generated data; the report marks
+Use `--input workload.npz` to supply arrays named `A` and `W`. Array size and
+row count are inferred unless supplied explicitly. If the file includes
+`metadata_json` with a `dtype`, that format is inferred too; an explicit
+`--dtype` overrides it. Files without format metadata default to BF16.
+External inputs replace generated data; the report marks
 `workload_source=external`, and `weight_pattern` only describes the generator
 configuration, not a validation of external inputs. Inputs must be finite;
 workloads that overflow the selected reference arithmetic are rejected.
@@ -152,4 +155,83 @@ latencies and flow control as a separate component model. Run the same A and
 logically equivalent W against both models, comparing correctness, setup bytes,
 cycles and throughput. Do not assume a 2x speedup: metadata, stalls and pipeline
 overhead must be measured from the actual design.
+
+## Your workload package
+
+The adapted [`generate_benchmarks.py`](generate_benchmarks.py) preserves your
+three synthetic workload shapes, listed in **M, N, K** order:
+
+| Workload | M | N | K |
+| --- | ---: | ---: | ---: |
+| `resnet50_conv1` | 12544 | 64 | 160 |
+| `llama3_q_proj` | 32 | 1024 | 4096 |
+| `llama3_gate_proj` | 256 | 1024 | 4096 |
+
+These names identify your chosen matrix dimensions; inputs are random synthetic
+data, not model checkpoints or a complete neural-network implementation.
+
+```sh
+# Generate all three full input pairs and one runnable tile pair per workload:
+python generate_benchmarks.py --output-dir benchmarks
+
+# Run the generated tile directly; size, rows and FP16 format are inferred:
+mini-sim --input benchmarks/tiles/resnet50_conv1_dense.npz --json results/resnet_dense.json
+mini-sim --input benchmarks/tiles/resnet50_conv1_sparse.npz --json results/resnet_sparse.json
+
+# Select another aligned K/N slice and different activation rows:
+python generate_benchmarks.py --workload llama3_q_proj --tile-size 32 \
+  --tile-rows 16 --k-start 32 --n-start 64 --row-start 8 --output-dir benchmarks/q_tile
+
+# Generate a BF16 package matching the default MEISSA configuration:
+python generate_benchmarks.py --dtype bf16 --output-dir benchmarks/bf16
+```
+
+After reinstalling with `python -m pip install -e ".[test]"`, `mini-generate`
+is an equivalent command. Generation needs NumPy only, with seed 100 by default.
+It uses NumPy's PCG64 rather than PyTorch's RNG, so a fixed seed is reproducible
+within this generator but does not reproduce the original Torch tensors.
+Each workload has an independent seed index; selecting just one workload does
+not change its tensors. Generating again at the same output path replaces
+matching generated files; use different directories to retain multiple variants.
+
+| Output | Contents and purpose |
+| --- | --- |
+| `manifest.json` | Original shapes, dtype, grouping axis, tile offsets, filenames, and run commands |
+| `full/<name>_dense.npz` | Complete `A[M,K]`, dense `W[K,N]`, JSON metadata |
+| `full/<name>_sparse.npz` | Same A, magnitude-pruned W, retained-position mask, metadata |
+| `tiles/<name>_dense.npz` | Runnable A/W tile, `C_reference`, metadata |
+| `tiles/<name>_sparse.npz` | Corresponding tile with pruned weights, `C_reference`, metadata |
+
+The original `np.save("...log", array)` actually wrote binary NumPy files named
+`...log.npy`. Explicit `.npz` files now match the mini simulator's A/W loader.
+`allow_pickle=False` can be used for every generated file; metadata is a scalar
+JSON string, not a pickled Python object. Large generated data is git-ignored.
+
+Pruning retains the two largest absolute values per four-element group. The
+default groups along **K**, i.e. four consecutive rows of W per output column,
+consistent with the mini simulator's existing convention. Your original script
+grouped along **N**. Use `--sparsity-axis N` to retain that orientation. Ties
+prefer earlier positions. The full sparse package records the retained-position
+mask, since a retained weight may itself be zero. This mask is data provenance,
+not a compressed hardware encoding. The RTL will determine the eventual format.
+
+The generator defaults to FP16 to preserve your original data format. BF16 is
+stored as rounded values in FP32 NumPy arrays, since NumPy has no native BF16
+storage type here. Metadata records the intended arithmetic format.
+
+**A tile is one K-slice contribution, not a complete layer benchmark.** Default
+tiles use array size 16 and up to 64 activation rows, starting at M=K=N=0.
+K/N offsets and array size must be multiples of four to preserve group boundaries.
+Final K/N edges are zero-padded; the manifest records valid dimensions. The
+full inputs are retained for later scheduling work, but the mini simulator does
+not yet execute arbitrary full M/N/K GEMMs or accumulate multiple K slices.
+No total layer latency is estimated from a single tile.
+
+`C_reference` follows the binary MEISSA adder tree and selected output rounding.
+The simulator independently recomputes its own reference; `--mixed` uses the
+mixed-tree oracle instead of the file's binary-tree reference. Optional
+`--full-reference` also writes full FP32 NumPy matmul outputs in
+`full/<name>_numpy_reference.npz`; those are diagnostic outputs, not exact
+MEISSA goldens. Both dense and pruned tile files run through the same original
+dense datapath, so pruning alone provides no modeled speedup.
 
