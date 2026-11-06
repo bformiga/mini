@@ -31,3 +31,30 @@ def reference_product(activations, weights, dtype="bf16", mixed=False):
         out.append(cast(result))
     return np.asarray(out, dtype=np.float32)
 
+
+def sparse_reference_product(activations, values, indices, dtype="bf16", mixed=False):
+    """Scalar oracle for selected products; no calls into the array model."""
+    from .sparse_codec import validate_compressed
+    v, ix = validate_compressed(values, indices)
+    dt = normalize_dtype(dtype)
+    def cast(row):
+        return np.asarray(cast_vector(row, dt) if dt else row, dtype=np.float32)
+    a = np.asarray([cast(row) for row in activations])
+    v = np.asarray([cast(row) for row in v])
+    physical, n = v.shape
+    if a.ndim != 2 or a.shape[1] != 2*physical:
+        raise ValueError("activation width must be twice the compressed row count")
+    levels = physical.bit_length()-1
+    groups = ([4]*(levels//2)+([2] if levels % 2 else [])) if mixed else [2]*levels
+    out = []
+    for row in a:
+        result = []
+        for col in range(n):
+            terms = [np.float32(row[4*(r//2)+int(ix[r,col])]*v[r,col]) for r in range(physical)]
+            for width in groups:
+                terms = [np.float32(sum(float(x) for x in terms[i:i+width]))
+                         for i in range(0,len(terms),width)]
+            result.append(float(terms[0]))
+        out.append(cast(result))
+    return np.asarray(out,dtype=np.float32)
+

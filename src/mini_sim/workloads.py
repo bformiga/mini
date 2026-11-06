@@ -13,6 +13,8 @@ import numpy as np
 from base.dtype import cast_vector, normalize_dtype
 from .benchmark import Config
 from .reference import reference_product
+from .reference import sparse_reference_product
+from .sparse_codec import compress_2of4
 
 
 # Preserve the user's dimensions and ordering: M, N, K.
@@ -135,6 +137,8 @@ def generate_benchmark(output_dir="benchmarks", *, seed=100, dtype="fp16",
             arrays = dict(A=a, W=w, metadata_json=np.asarray(json.dumps(meta)))
             if label == "sparse":
                 arrays["keep_mask"] = mask
+                if sparsity_axis == "K":
+                    arrays["W_values"], arrays["W_indices"] = compress_2of4(w)
             np.savez(root / full_path, **arrays)
             at, wt, tile_info = extract_tile(a, w, size=tile_size, rows=tile_rows,
                 row_start=row_start, k_start=k_start, n_start=n_start)
@@ -151,6 +155,27 @@ def generate_benchmark(output_dir="benchmarks", *, seed=100, dtype="fp16",
             path_text = (root / tile_path).as_posix()
             entry["commands"].append(f'mini-sim --size {tile_size} --rows {at.shape[0]} '
                 f'--dtype {dtype} --input "{path_text}"')
+        if sparsity_axis == "K":
+            # Same physical SxS grid, logical K=2*S. Existing square dense-
+            # execution fixtures stay available for backwards compatibility.
+            at, wide_w, tile_info = extract_tile(a,sparse,size=2*tile_size,rows=tile_rows,
+                row_start=row_start,k_start=k_start,n_start=n_start)
+            wt = wide_w[:,:tile_size]
+            v,ix = compress_2of4(wt)
+            tile_info.update(size=tile_size,logical_k=2*tile_size,valid_n=min(tile_size,n-n_start))
+            structured_path = Path("tiles") / f"{name}_structured.npz"
+            structured_meta = dict(workload=name,shape_MNK=[m,n,k],dtype=dtype,
+                sparsity_axis="K",execution_mode="sparse",physical_size=tile_size,
+                encoding="column_major_values_then_packed_2bit_indices",
+                reference_tree="binary",tile=tile_info,synthetic=True,
+                scope="single_K_slice_contribution")
+            reference = sparse_reference_product(at,v,ix,
+                dtype=None if dtype=="fp32" else dtype,mixed=False)
+            np.savez(root/structured_path,A=at,W_values=v,W_indices=ix,
+                C_reference=reference,metadata_json=np.asarray(json.dumps(structured_meta)))
+            entry["files"]["structured"] = dict(tile=structured_path.as_posix())
+            entry["structured_tile"] = tile_info
+            entry["commands"].append(f'mini-sim --input "{(root/structured_path).as_posix()}" --load-path atalla')
         if full_reference:
             ref_path = Path("full") / f"{name}_numpy_reference.npz"
             af = a.astype(np.float32)

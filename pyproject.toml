@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atalla-mini"
-version = "0.1.0"
-description = "Isolated Atalla MEISSA dense compute baseline for sparsity research"
+version = "0.2.0"
+description = "Atalla dense baseline and diagram-based structured 2:4 MEISSA experiments"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 

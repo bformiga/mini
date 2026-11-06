@@ -1,0 +1,151 @@
+{
+  "schema_version": 2,
+  "architecture": "structured_2of4_meissa",
+  "config": {
+    "size": 16,
+    "rows": 8,
+    "dtype": "fp16",
+    "seed": 0,
+    "weight_pattern": "dense",
+    "mixed": false,
+    "mul_latency": 1,
+    "add2_latency": 1,
+    "add4_latency": 3,
+    "input_interval": 1,
+    "stall_every": 0,
+    "native": false,
+    "mode": "sparse",
+    "load_path": "atalla",
+    "mux_latency": 0,
+    "output_read_interval": 1,
+    "dram_latency": 6,
+    "dram_burst_bytes": 8,
+    "memory_queue_depth": 16,
+    "spad_read_latency": 2,
+    "spad_write_latency": 1
+  },
+  "correctness_passed": true,
+  "max_absolute_error": 0.0,
+  "physical_shape": [
+    16,
+    16
+  ],
+  "logical_weight_shape": [
+    32,
+    16
+  ],
+  "total_cycles": 288,
+  "memory": {
+    "cycles": 244,
+    "dma_cycles": 205,
+    "frontend_read_cycles": 39,
+    "useful_bytes": 1088,
+    "transferred_bytes": 1088,
+    "issued_bursts": 136,
+    "burst_slot_capacity_bytes": 1088,
+    "backend_stalls": 51,
+    "scratchpad_stats": {
+      "tiles": [
+        {
+          "tile": 0,
+          "reads": 17,
+          "writes": 17,
+          "stalls": 0,
+          "read_queue": 0,
+          "write_queue": 0
+        }
+      ],
+      "backend_slots": [
+        {
+          "tile": 0,
+          "attached": true
+        }
+      ]
+    }
+  },
+  "array_cycles": 44,
+  "weight_setup_cycles": 16,
+  "compute_and_drain_cycles": 28,
+  "pipeline_depth": 5,
+  "first_input_cycle": 260,
+  "first_output_cycle": 280,
+  "last_output_cycle": 287,
+  "first_row_latency_cycles": 21,
+  "input_cycles": [
+    260,
+    261,
+    262,
+    263,
+    264,
+    265,
+    266,
+    267
+  ],
+  "output_cycles": [
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286,
+    287
+  ],
+  "output_read_cycles": [
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286,
+    287
+  ],
+  "stall_cycles": 0,
+  "input_backpressure_cycles": 0,
+  "executed_multiplications": 2048,
+  "dense_equivalent_flops": 8192,
+  "weight_payload_bytes": 576,
+  "activation_payload_bytes": 512,
+  "metadata_bytes": 64,
+  "native_used": false,
+  "simulator_wall_seconds": 0.009175984000194148,
+  "timing_scope": "serial_memory_frontend_then_array",
+  "rtl_timing_validated": false,
+  "full_atalla_workflow_equivalent": false,
+  "assumptions": {
+    "same_physical_multiplier_count": true,
+    "mux_latency_cycles": 0,
+    "sparse_encoding": "column_major_values_then_packed_2bit_indices",
+    "memory_overlap": false,
+    "vrf_vlsu_gsau_timing_included": false,
+    "output_sink": "always_ready"
+  },
+  "input_file": "results/structured_package/tiles/resnet50_conv1_structured.npz",
+  "input_metadata": {
+    "workload": "resnet50_conv1",
+    "shape_MNK": [
+      12544,
+      64,
+      160
+    ],
+    "dtype": "fp16",
+    "sparsity_axis": "K",
+    "execution_mode": "sparse",
+    "physical_size": 16,
+    "encoding": "column_major_values_then_packed_2bit_indices",
+    "reference_tree": "binary",
+    "tile": {
+      "row_start": 0,
+      "k_start": 0,
+      "n_start": 0,
+      "rows": 8,
+      "size": 16,
+      "valid_k": 32,
+      "valid_n": 16,
+      "logical_k": 32
+    },
+    "synthetic": true,
+    "scope": "single_K_slice_contribution"
+  }
+}

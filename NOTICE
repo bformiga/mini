@@ -6,3 +6,9 @@ The original LICENSE is included.
 The mini_sim package, packaging, benchmark tests, and this documentation were
 added to isolate the dense compute baseline for structured sparsity research.
 
+This branch also restores the original memory models and their component tests.
+The GSAUTPUBridge class is extracted from the supplied sysarr_tpu_system.py
+with standalone imports and a packing helper for boundary-equivalence tests.
+The diagram-based structured array, codec, memory harness and rectangular
+runner are new prototype code; they are not validated sparse RTL models.
+
