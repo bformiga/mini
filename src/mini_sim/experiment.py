@@ -4,13 +4,14 @@ from dataclasses import asdict, dataclass, replace
 from time import perf_counter
 import numpy as np
 
-from .benchmark import Config, Result, run as run_dense
+from .benchmark import Config, Result, make_workload, run as run_dense
 from .array_adapter import BenchmarkMEISSA
 from .structured_array import StructuredMEISSA
 from .sparse_codec import (compress_2of4, decompress_2of4, pack_sparse, unpack_sparse,
                            encode_numbers, decode_numbers, validate_compressed)
 from .reference import reference_product, sparse_reference_product
 from .memory_path import transfer_payload
+from .counters import dense_tile_counters, sparse_tile_counters, sum_counters
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,11 @@ def run_experiment(config=ExperimentConfig(), activations=None, weights=None, *,
         if values is not None or indices is not None:
             raise ValueError("compressed inputs require --mode sparse")
         result = run_dense(config,activations,weights,collect_trace=collect_trace)
+        if (weights is not None):
+            w_used = weights
+        else:
+            w_used = make_workload(config)[1]
+        result.report.update(dense_tile_counters(config.rows, np.asarray(w_used,dtype=np.float32)))
         result.report.update(timing_scope="array_boundary",rtl_timing_validated=False,
                              full_atalla_workflow_equivalent=False,
                              physical_shape=[config.size,config.size],
@@ -217,6 +223,11 @@ def run_experiment(config=ExperimentConfig(), activations=None, weights=None, *,
             sparse_encoding="column_major_values_then_packed_2bit_indices",
             memory_overlap=False,vrf_vlsu_gsau_timing_included=False,
             output_sink="periodic_consumer" if explicit_consumer else "always_ready"))
+    if (config.mode == "sparse"):
+        counters = sparse_tile_counters(config.rows, v)
+    else:
+        counters = dense_tile_counters(config.rows, w)
+    report.update(counters)
     return Result(report,output,expected,trace)
 
 
@@ -236,6 +247,7 @@ def run_rectangular(config,a,w,*,row_tile=64):
     cycles = total_muls = weight_bytes = metadata_bytes = bursts = memory_cycles = 0
     tiles = 0
     tile_checks = True
+    tile_counters = []
     for i in range(0,m,row_tile):
         nr = min(row_tile,m-i)
         for j in range(0,n,config.size):
@@ -256,8 +268,9 @@ def run_rectangular(config,a,w,*,row_tile=64):
                 metadata_bytes += r.report.get("metadata_bytes",0)
                 memory_cycles += r.report.get("memory",{}).get("cycles",0)
                 bursts += r.report.get("memory",{}).get("issued_bursts",0)
+                tile_counters.append(r.report)
                 tiles += 1
-    return Result(dict(schema_version=2,architecture="structured_2of4_meissa" if config.mode=="sparse" else "original_dense_meissa",
+    report = dict(schema_version=2,architecture="structured_2of4_meissa" if config.mode=="sparse" else "original_dense_meissa",
         config=asdict(config),shape_MNK=[m,n,k],physical_shape=[config.size,config.size],tiles=tiles,
         correctness_passed=bool(tile_checks and np.array_equal(out,ref)),
         serial_tile_cycles=cycles,total_cycles=None,memory_cycles=memory_cycles,issued_dram_bursts=bursts,
@@ -265,4 +278,6 @@ def run_rectangular(config,a,w,*,row_tile=64):
         max_absolute_error=float(np.max(np.abs(out.astype(float)-ref.astype(float)))),
         timing_scope="sum_of_serial_tile_measurements_excludes_accumulation",
         accumulation="software_fp32_sequential_K_tiles",accumulation_cycles_included=False,
-        rtl_timing_validated=False,full_atalla_workflow_equivalent=False),out,ref,[])
+        rtl_timing_validated=False,full_atalla_workflow_equivalent=False)
+    report.update(sum_counters(tile_counters))
+    return Result(report, out, ref, [])
