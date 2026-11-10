@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 from .experiment import ExperimentConfig, run_experiment, run_rectangular
 from .sparse_codec import decompress_2of4
+from .compare import compare_dense_vs_sparse
 
 
 def destination(name):
@@ -27,6 +28,10 @@ def main(argv=None):
     p.add_argument("--spad-write-latency", type=int, default=1)
     p.add_argument("--full", action="store_true", help="tile full rectangular GEMM; FP32 software accumulation is untimed")
     p.add_argument("--row-tile", type=int, default=64)
+    p.add_argument("--compare", action="store_true", help="prune W to 2:4 and run dense and sparse on the same GEMM (needs --input or --M/--N/--K)")
+    p.add_argument("--M", type=int, help="--compare without --input: random A[M,K]")
+    p.add_argument("--N", type=int, help="--compare without --input: random W[K,N]")
+    p.add_argument("--K", type=int, help="--compare without --input: K, divisible by four")
     p.add_argument("--size", type=int, help="array size; infer from input or default to 16")
     p.add_argument("--rows", type=int, help="activation rows; infer from input or default to 64")
     p.add_argument("--dtype", choices=["bf16", "fp16", "fp32"],
@@ -47,6 +52,9 @@ def main(argv=None):
     args = vars(p.parse_args(argv))
     paths = {key: args.pop(key) for key in ("input", "json", "trace", "output")}
     full, row_tile = args.pop("full"), args.pop("row_tile")
+    compare = args.pop("compare")
+    mnk = {key: args.pop(key) for key in ("M", "N", "K")}
+    tiled = full or compare
     try:
         a = w = None
         values = indices = None
@@ -70,15 +78,33 @@ def main(argv=None):
         args["mode"] = args["mode"] or (metadata or {}).get("execution_mode", "sparse" if values is not None else "dense")
         if args["mode"] == "sparse" and (metadata or {}).get("sparsity_axis") == "N":
             raise ValueError("structured MEISSA uses 2:4 along K; regenerate with --sparsity-axis K")
-        if paths["input"] and not full:
+        if paths["input"] and not tiled:
             factor = 2 if args["mode"] == "sparse" else 1
             if a.ndim != 2 or w.ndim != 2 or w.shape[0] != factor*w.shape[1] or a.shape[1] != w.shape[0]:
                 raise ValueError("mini-sim accepts single tiles A[rows,K], W[K,size] with K=size (dense) "
                                  "or K=2*size (sparse); use matching tiles/ files or --full")
-        args["size"] = args["size"] if args["size"] is not None else (w.shape[1] if w is not None and not full else 16)
+        args["size"] = args["size"] if args["size"] is not None else (w.shape[1] if w is not None and not tiled else 16)
+        if ((compare) and (a is None)):
+            if (not all(mnk.values())):
+                raise ValueError("--compare needs --input, or all of --M, --N and --K")
+            rng = np.random.default_rng(args["seed"])
+            a = rng.uniform(-1, 1, (mnk["M"], mnk["K"])).astype(np.float32)
+            w = rng.uniform(-1, 1, (mnk["K"], mnk["N"])).astype(np.float32)
         args["rows"] = args["rows"] if args["rows"] is not None else (a.shape[0] if a is not None else 64)
         args["dtype"] = args["dtype"] or (metadata or {}).get("dtype", "bf16")
         cfg = ExperimentConfig(**args)
+        if (compare):
+            if ((paths["trace"]) or (paths["output"])):
+                raise ValueError("--trace and --output are single-tile options; omit them for --compare")
+            result, _, _ = compare_dense_vs_sparse(cfg, a, w, row_tile=row_tile)
+            report = json.dumps(result, indent=2, allow_nan=False) + "\n"
+            if (paths["json"]):
+                destination(paths["json"]).write_text(report)
+            print(report, end="")
+            if (result["both_correct"]):
+                return 0
+            else:
+                return 1
         if full:
             if a is None:
                 raise ValueError("--full requires an input package")
