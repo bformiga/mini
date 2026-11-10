@@ -41,11 +41,11 @@ def compare_dense_vs_sparse(config, a, w, *, row_tile=64):
     w = np.asarray(w, dtype=np.float32)
 
     if ((a.ndim != 2) or (w.ndim != 2) or (a.shape[1] != w.shape[0])):
-        raise AssertionError(
+        raise ValueError(
             f"A must have shape [M, K] and W must have shape [K, N] with the same K, "
             f"but A has shape {a.shape} and W has shape {w.shape}.")
     if (w.shape[0] % 4 != 0):
-        raise AssertionError(
+        raise ValueError(
             f"K must be divisible by four for 2:4 grouping, but K is {w.shape[0]}.")
 
     pruned = sparsity_2_4(w, "K")
