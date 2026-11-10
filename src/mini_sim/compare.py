@@ -7,7 +7,7 @@ from .experiment import run_rectangular
 from .workloads import sparsity_2_4
 
 _REPORT_FIELDS = ("tiles", "serial_tile_cycles", "memory_cycles", "executed_multiplications", "weight_payload_bytes", "metadata_bytes", 
-                  "dense_macs", "issued_macs", "skipped_macs", "zero_slot_macs", "useful_macs", "effective_weight_density", "output_matches_reference")
+                  "dense_macs", "issued_macs", "skipped_macs", "zero_slot_macs", "useful_macs", "effective_weight_density", "correctness_passed")
 
 _RATIO_FIELDS = ("executed_multiplications", "serial_tile_cycles", "weight_payload_bytes")
 
@@ -78,7 +78,7 @@ def compare_dense_vs_sparse(config, a, w, *, row_tile=64):
                 max_diff = diff
     
     # True only if both the dense and the sparse run match their reference output
-    both_correct = bool(d["output_matches_reference"] and s["output_matches_reference"])
+    both_correct = bool(d["correctness_passed"] and s["correctness_passed"])
 
     report = {}
     report["schema_version"] = 1
