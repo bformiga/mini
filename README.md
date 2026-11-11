@@ -154,6 +154,20 @@ output stores, and is not an end-to-end Atalla layer latency. There is no cross-
 tile reuse, overlap or original instruction scheduling. Full CSV traces are not
 implemented; `--trace` is for individual tiles.
 
+## Operation counters and dense vs. sparse comparison
+
+Every report contains operation counters (`dense_macs`, `issued_macs`,
+`skipped_macs`, `zero_slot_macs`, `useful_macs` and `effective_weight_density`),
+counted from the weight data and not timed. `--compare` runs the dense array and
+the sparse array on the same A and the same pruned W:
+
+```sh
+mini-sim --compare --M 64 --N 96 --K 128 --size 16 --mixed --json results/compare.json
+```
+
+The counter definitions, the report fields, expected values and the steps to
+reproduce them are in [docs/counters_and_comparison.md](docs/counters_and_comparison.md).
+
 ## Precision, latency and flow control
 
 BF16/FP16 input and output rounding and FP32 arithmetic are retained. FP32 mode
@@ -190,7 +204,9 @@ zero. Sparse reports distinguish output availability from output read cycles.
 | src/mini_sim/experiment.py | New modes, flow control, reports and rectangular driver |
 | src/mini_sim/workloads.py | Separate data generator, extended with compressed packages |
 | src/mini_sim/reference.py | Independent dense oracle plus new sparse oracle |
-| src/mini_sim/cli.py | Input formats, mode selection, memory parameters and --full |
+| src/mini_sim/counters.py | New MAC counters for dense and 2:4 tiles, summed over tiles |
+| src/mini_sim/compare.py | New dense vs. sparse comparison on one pruned workload |
+| src/mini_sim/cli.py | Input formats, mode selection, memory parameters, --full and --compare |
 | src/mini_sim/original_bridge.py | Extracted original bridge class with standalone imports/helper, used for tests |
 
 Existing component and benchmark tests are retained. Original memory tests and
@@ -201,9 +217,13 @@ outputs, credit values and arrival cycles are compared against the original
 extracted GSAU bridge under identical boundary traffic. That comparison does
 not validate the excluded upstream scheduling or sparse RTL timing.
 
+`tests/test_counters.py` checks the counters against hand counts, edge padding and
+tile summing, plus the dense vs. sparse comparison and the `--compare` command.
+
 Optional dense acceleration: `make native`, then `mini-sim --native`.
 Sparse C++ acceleration is not implemented and sparse --native is rejected.
 Native tests skip when the library is absent.
 
 See [docs/structured_2of4.md](docs/structured_2of4.md) for the prototype contract
-and remaining RTL questions. Original source attribution and LICENSE are retained.
+and remaining RTL questions, and [docs/counters_and_comparison.md](docs/counters_and_comparison.md)
+for the counters and the dense vs. sparse comparison. Original source attribution and LICENSE are retained.
