@@ -1,4 +1,4 @@
-# Operation counters and dense-versus-sparse comparison
+# Operation counters and dense vs. sparse comparison
 
 The counters and the comparison run on the same design-exploration model as the
 rest of this branch (see [structured_2of4.md](structured_2of4.md)). No sparse RTL
