@@ -83,7 +83,7 @@ python -m pytest -q
 ```
 
 The first command runs the counter, comparison and `--compare` tests (11 test
-cases) and should end with `11 passed`. The second runs the whole suite; native
+cases) and should end with `11 passed`. The second runs all tests; native
 tests are skipped when the C++ library is absent.
 
 **2. Counters for one tile**
@@ -128,9 +128,9 @@ change the latency, `--mixed`, `--load-path` or memory options.
 
 **4. Reading a report**
 
-In single-tile and `--full` reports the counters sit at the top level, so any
+In single-tile and `--full` reports the counters are located at the top level, so any
 field can be read with a one-line script such as the one in step 2. In a
-`--compare` report they are nested under `dense` and `sparse`, and the ratios are
+`--compare` report they are grouped under `dense` and `sparse`, and the ratios are
 under `sparse_over_dense`. Repeating a command gives the same numbers. The one
 exception is `simulator_wall_seconds` in single-tile reports, which is a
 wall-clock measurement.
